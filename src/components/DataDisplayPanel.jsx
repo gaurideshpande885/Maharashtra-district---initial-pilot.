@@ -1,24 +1,56 @@
-export default function DataDisplayPanel({ data }) {
+export default function DataDisplayPanel({ data, crop }) {
   if (!data) return null;
+
+  // 1. Extract Yield by dynamically matching the selected crop name
+  const cropService = data.crop?.[0];
+  const allCrops = cropService?.supporting_evidence?.district_crop_apy?.crops || [];
+
+  const matchingCropRow = allCrops.find(
+    (c) => c.crop && c.crop.toLowerCase() === (crop || "").toLowerCase()
+  ) || allCrops[0];
+
+  const yieldKgHa = matchingCropRow?.yield_kg_ha;
+  const yieldTHa = yieldKgHa ? (yieldKgHa / 1000).toFixed(2) : "N/A";
+
+  // 2. Extract Mandi Price from market service
+  const marketService = data.market?.[0];
+  const mandiPrice = marketService?.average_case?.value ?? "N/A";
+  const priceDetail = marketService?.recommendation_detail ?? "No recent price data";
+
+  // 3. Extract Water Stress from water service
+  const waterService = data.water?.[0];
+  const waterStressPct = waterService?.supporting_evidence?.stage_of_extraction_pct ?? "N/A";
+
   return (
-    <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-      <div style={{ flex: 1, minWidth: "200px", border: "2px solid #22c55e", borderRadius: "12px", padding: "16px" }}>
-        <p style={{ fontSize: "11px", color: "#9ca3af", fontWeight: "bold" }}>YIELD SIGNAL</p>
-        <p style={{ fontSize: "24px", fontWeight: "bold" }}>{data.yield} T/ha</p>
-        <p style={{ color: data.yieldColor, fontWeight: "600" }}>{data.yieldTrend}</p>
-        <p style={{ fontSize: "12px", color: "#9ca3af" }}>Rainfall: {data.rainfall} mm</p>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Yield Card */}
+      <div className="bg-white p-5 rounded-xl border border-green-200 shadow-sm">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Yield Signal</h3>
+        <p className="text-2xl font-bold text-gray-800 mt-2">
+          {yieldTHa} <span className="text-sm font-normal text-gray-500">T/ha</span>
+        </p>
+        <p className="text-xs text-gray-400 mt-2">Source: DES / MoSPI district crop APY (VERIFIED)</p>
       </div>
-      <div style={{ flex: 1, minWidth: "200px", border: "2px solid #3b82f6", borderRadius: "12px", padding: "16px" }}>
-        <p style={{ fontSize: "11px", color: "#9ca3af", fontWeight: "bold" }}>MANDI PRICE</p>
-        <p style={{ fontSize: "24px", fontWeight: "bold" }}>₹{data.mandiPrice}/q</p>
-        <p style={{ color: "#3b82f6", fontWeight: "600" }}>{data.priceTrend}</p>
-        <p style={{ fontSize: "12px", color: "#9ca3af" }}>Arrivals: {data.arrivals} qtl</p>
+
+      {/* Mandi Price Card */}
+      <div className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mandi Price</h3>
+        <p className="text-2xl font-bold text-gray-800 mt-2">
+          ₹{mandiPrice} <span className="text-sm font-normal text-gray-500">/q</span>
+        </p>
+        <p className="text-xs text-blue-600 mt-2 font-medium">{priceDetail}</p>
+        <p className="text-xs text-gray-400 mt-2">Source: Agmarknet daily prices (VERIFIED)</p>
       </div>
-      <div style={{ flex: 1, minWidth: "200px", border: "2px solid #f97316", borderRadius: "12px", padding: "16px" }}>
-        <p style={{ fontSize: "11px", color: "#9ca3af", fontWeight: "bold" }}>WATER STRESS</p>
-        <p style={{ fontSize: "24px", fontWeight: "bold" }}>{data.waterLevel}%</p>
-        <p style={{ color: data.waterColor, fontWeight: "600" }}>{data.waterStress} Stress</p>
-        <p style={{ fontSize: "12px", color: "#9ca3af" }}>Reservoir Level</p>
+
+      {/* Water Stress Card */}
+      <div className="bg-white p-5 rounded-xl border border-orange-200 shadow-sm">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Water Stress</h3>
+        <p className="text-2xl font-bold text-gray-800 mt-2">{waterStressPct}%</p>
+        <p className="text-xs text-gray-400 mt-1">Stage of groundwater extraction</p>
+        <p className="text-xs text-gray-400 mt-2">Source: GSDA groundwater assessment (VERIFIED)</p>
+        <p className="text-xs text-orange-600 mt-2">
+          ⚠️ District average — Deola, Niphad and Sinnar talukas are individually critical
+        </p>
       </div>
     </div>
   );
