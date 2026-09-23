@@ -1,50 +1,80 @@
 # AIAIC District Intelligence Dashboard
 
-A district-level agricultural intelligence dashboard built for the AIAIC Interface Layer (Task 3).
+A real-data agricultural intelligence dashboard built for the AIAIC/AQAIC Live Farm-to-Table
+District Intelligence & Execution Integration project.
 
-**Built by:** Gauri Deshpande
+**Pilot district:** Nashik, Maharashtra
+**Pilot commodities:** Soybean, Rice
 
-## What it does
-Allows users to select a district, crop, and season to view:
-- Yield signals and trends
-- Mandi price signals  
-- Water stress indicators
-- Income simulation (best/average/worst case scenarios)
+## What this shows
 
-## Tech Stack
-- React 19 + Vite
-- Tailwind CSS v4
-- Recharts (bar chart visualization)
-- Mock data (Mahesh + Deep pipeline format)
+For a selected district and crop, the dashboard displays:
 
-## How to run
-```bash
-npm install
-npm run dev
-```
-Opens at: http://localhost:5173
+- **Yield Signal** — district crop yield (DES / MoSPI)
+- **Mandi Price** — real daily mandi prices with mandi-level comparison (Agmarknet)
+- **Water Stress** — groundwater extraction stage (GSDA)
+- **Crop Area Share** — real crop-area breakdown for the district (DES)
+- **Sell-Now vs Store Simulation** — an illustrative scenario built on real price/MSP/storage-cost data
 
-## Project Structure
+Every card shows its data source. The dashboard also displays the backend's own
+`uncalibrated_warning`: **this is a working demo on real data, not farmer-ready advice.**
+Thresholds have not yet been reviewed by an agronomist or agricultural economist.
+
+## Tech stack
+
+- React + Vite
+- Tailwind CSS
+- Recharts (for the pie chart)
+
+## Project structure:
 src/
-├── components/
-│   ├── DistrictSelector.jsx
-│   ├── CropSelector.jsx
-│   ├── TimeRangeSelector.jsx
-│   ├── DataDisplayPanel.jsx
-│   ├── SimulationPanel.jsx
-│   └── SystemStateBar.jsx
-├── data_adapter/
-│   ├── Mahesadapter.jsx
-│   └── deep_adapter.jsx
-├── mock_data/
-│   ├── maheshMock.json
-│   └── simulationMock.json
-└── App.jsx
+components/
+CropSelector.jsx
+DistrictSelector.jsx
+DataDisplayPanel.jsx
+CropAreaPieChart.jsx
+SimulationPanel.jsx
+SystemStateBar.jsx
+data_adapter/
+useCatalog.js
+catalogOptions.js
+App.jsx
 
-## Sample Output
-Selecting Pune + Wheat + Kharif 2025 shows:
-- Yield: 3.4 T/ha — Stable
-- Mandi Price: ₹2100/q — Above Average  
-- Water Stress: 68% — Low Stress
-- Income: Best ₹85,000 / Avg ₹68,000 / Worst ₹42,000
-- Confidence: 82% — Low Risk
+## Backend
+
+Connects to a live backend (Hemanth's API) via:
+
+- `GET /catalog?state=maharashtra` — dynamic crop/district dropdown options
+- `GET /intelligence/unified?crop=&region=&state=&per_service=1` — unified real-data response
+
+## Data sources currently integrated (see AIAIC_DATASET_REGISTER_V1 for full list)
+
+| Layer | Source | Status |
+|---|---|---|
+| Market | Agmarknet daily prices | VERIFIED |
+| Water | GSDA groundwater assessment | VERIFIED |
+| Agriculture | DES district crop APY | VERIFIED |
+| Weather | Open-Meteo (interim stand-in for IMD) | PARTIALLY VERIFIED |
+| Soil, Insurance, eNAM, FPO, Consumer | — | Not yet acquired |
+
+## Known limitations
+
+- Water/CGWB data is a district-wide average and does not reflect taluka-level variation
+  (some Nashik talukas are individually water-critical even though the district reads "safe").
+- Weather data is an interim stand-in for the official IMD feed.
+- The Sell-Now vs Store simulation uses a real reference mandi price from outside Nashik
+  (APMC Amarawati) and an assumed spoilage rate — it is explicitly illustrative, not a
+  farmer-ready recommendation.
+- Soil, crop insurance, eNAM, FPO/aggregator, and consumer-facing data are not yet available.
+
+## Team
+
+- **Riddhi** — Application, Frontend, Data Integration
+- **Hemanth** — Backend, Data Engineering, API
+- **Kaushalendra** — CI/CD, VM, System Integration
+- **Gauri** — District Intelligence & Farm-to-Table Intelligence
+
+## Status
+
+First live demo slice complete: **Nashik → Soybean → Real Yield → Real Water → Real Mandi Price**,
+with source attribution and uncalibrated-data warnings visible in the UI.
