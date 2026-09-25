@@ -1,8 +1,10 @@
-// SimulationPanel.jsx
 export default function SimulationPanel({ data }) {
   const storage = data?.storage?.[0];
   const sim = storage?.supporting_evidence?.illustrative_storage_scenario;
   if (!sim) return null;
+
+  const referenceMandi = storage?.supporting_evidence?.representative_mandi || "an unspecified reference mandi";
+  const requestedRegion = storage?.subject?.region || "your district";
 
   return (
     <div className="bg-white p-5 rounded-xl border border-purple-200 shadow-sm">
@@ -34,11 +36,9 @@ export default function SimulationPanel({ data }) {
         </div>
       </div>
 
-      <p className="text-xs text-purple-700 mt-3">
-        {sim.note}
-      </p>
+      <p className="text-xs text-purple-700 mt-3">{sim.note}</p>
       <p className="text-xs text-gray-400 mt-2">
-        Price shown is from APMC Amarawati (reference mandi), not Nashik's own price.
+        Price shown is from {referenceMandi} (reference mandi), not {requestedRegion}'s own price.
       </p>
     </div>
   );

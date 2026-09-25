@@ -4,23 +4,33 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recha
 const COLORS = ["#16a34a", "#2563eb", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"];
 
 export default function CropAreaPieChart({ data }) {
-  const crops = data?.crop?.[0]?.supporting_evidence?.district_crop_apy?.crops || [];
+  const cropService = data?.crop?.[0];
+  const region = cropService?.subject?.region || "Selected District";
+  const crops = cropService?.supporting_evidence?.district_crop_apy?.crops || [];
+  const source = cropService?.sources_used?.[0];
 
-  // Combine same crop across seasons, keep only crops with area > 0
   const byCrop = {};
   crops.forEach((c) => {
     if (c.area_lakh_ha > 0) {
       byCrop[c.crop] = (byCrop[c.crop] || 0) + c.area_lakh_ha;
     }
   });
-  const chartData = Object.entries(byCrop).map(([crop, area]) => ({ name: crop, value: area }));
+
+  const chartData = Object.entries(byCrop).map(([crop, area]) => ({
+    name: crop,
+    value: Math.round(area * 100) / 100,
+  }));
 
   if (chartData.length === 0) return null;
+
+  const freshnessLabel = source
+    ? (source.real_world_freshness || source.freshness || "").toUpperCase()
+    : "";
 
   return (
     <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
       <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-        Crop Area Share — Nashik (lakh ha)
+        Crop Area Share — {region} (lakh ha)
       </h3>
       <ResponsiveContainer width="100%" height={260}>
         <PieChart>
@@ -29,11 +39,13 @@ export default function CropAreaPieChart({ data }) {
               <Cell key={i} fill={COLORS[i % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip />
+          <Tooltip formatter={(value) => `${value} lakh ha`} />
           <Legend />
         </PieChart>
       </ResponsiveContainer>
-      <p className="text-xs text-gray-400 mt-2">Source: DES / MoSPI district crop APY 2024-25 (VERIFIED)</p>
+      <p className="text-xs text-gray-400 mt-2">
+        Source: {source?.source_name || "Unknown"} ({freshnessLabel})
+      </p>
     </div>
   );
 }
