@@ -11,6 +11,7 @@ export function useCatalog(estate = 'maharashtra') {
   const fetchCatalog = useCallback(async () => {
     setLoading(true)
     setError(null)
+    setCatalog(null)
     try {
       const r = await fetch(`${API}/catalog?state=${estate}`, {
         headers: { 'ngrok-skip-browser-warning': 'true' },

@@ -30,11 +30,17 @@ export default function CropAreaPieChart({ data }) {
   return (
     <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
       <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-        Crop Area Share — {region} (lakh ha)
+        How farmland is used in {region} (in lakh hectares; 1 lakh = 100,000)
       </h3>
       <ResponsiveContainer width="100%" height={260}>
         <PieChart>
-          <Pie data={chartData} dataKey="value" nameKey="name" outerRadius={90} label>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            outerRadius={90}
+            label={(entry) => `${entry.name}: ${entry.value}`}
+          >
             {chartData.map((_, i) => (
               <Cell key={i} fill={COLORS[i % COLORS.length]} />
             ))}
@@ -44,7 +50,9 @@ export default function CropAreaPieChart({ data }) {
         </PieChart>
       </ResponsiveContainer>
       <p className="text-xs text-gray-400 mt-2">
-        Source: {source?.source_name || "Unknown"} ({freshnessLabel})
+        <p className="text-xs text-gray-400 mt-2">
+          Where this comes from: DES / MoSPI (government crop statistics)
+        </p>
       </p>
     </div>
   );
