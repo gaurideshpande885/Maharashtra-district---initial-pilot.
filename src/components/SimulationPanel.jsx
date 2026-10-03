@@ -1,3 +1,7 @@
+import { fixedBandOf } from "../data_adapter/aiaicApi";
+
+const BAND_TEXT = { plus_minus_2_pct: "±2%", plus_minus_1_5_pct: "±1.5%" };
+
 export default function SimulationPanel({ data }) {
   const storage = data?.storage?.[0];
 
@@ -33,6 +37,10 @@ export default function SimulationPanel({ data }) {
   // The backend's own most important warnings, shown as written
   const warnings = (storage.read_these_first || []).slice(0, 2);
 
+  // When AIAIC has no measured spread, its engine fills best/average/worst with a FIXED band around one price.
+  // That is not "a better day / a weaker day", so only the price itself is shown (review 2026-10-02).
+  const band = sim ? null : fixedBandOf(storage.summary);
+
   return (
     <div className="bg-white p-5 rounded-xl border border-purple-200 shadow-sm">
       <div className="flex items-center justify-between mb-2">
@@ -53,21 +61,34 @@ export default function SimulationPanel({ data }) {
             <strong>{headline}</strong>
           </p>
 
-          <p className="text-xs text-gray-500 mb-2">Expected price per quintal (100 kg):</p>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div>
-              <p className="text-xs text-gray-400">On a better day</p>
-              <p className="font-bold text-gray-800">{money(scenario.best_case?.value)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400">On a typical day</p>
+          {band ? (
+            <>
+              <p className="text-xs text-gray-500 mb-2">Latest price per quintal (100 kg):</p>
               <p className="font-bold text-gray-800">{money(scenario.average_case?.value)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400">On a weaker day</p>
-              <p className="font-bold text-gray-800">{money(scenario.worst_case?.value)}</p>
-            </div>
-          </div>
+              <p className="text-xs text-gray-500 mt-2">
+                No better-day or weaker-day range is shown: there is no measured spread here, only a fixed{" "}
+                {BAND_TEXT[band] || "band"} around this one price.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500 mb-2">Expected price per quintal (100 kg):</p>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <p className="text-xs text-gray-400">On a better day</p>
+                  <p className="font-bold text-gray-800">{money(scenario.best_case?.value)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">On a typical day</p>
+                  <p className="font-bold text-gray-800">{money(scenario.average_case?.value)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">On a weaker day</p>
+                  <p className="font-bold text-gray-800">{money(scenario.worst_case?.value)}</p>
+                </div>
+              </div>
+            </>
+          )}
 
           <p className="text-xs text-gray-400 mt-3">
             The price used here comes from {referenceMandi}, not from {requestedRegion}.

@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local settings: the address of the AIAIC server you test against. Never commit it (see .env.example).
+.env
+.env.*
+!.env.example

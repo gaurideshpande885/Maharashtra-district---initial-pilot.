@@ -1,7 +1,10 @@
 // CropAreaPieChart.jsx
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-const COLORS = ["#16a34a", "#2563eb", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"];
+// Twelve distinguishable colours: a district's crop list is usually longer than six, and a repeated colour makes
+// two crops look like one (Nashik lists ten).
+const COLORS = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948",
+                "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac", "#1f3a93", "#8cd17d"];
 
 export default function CropAreaPieChart({ data }) {
   const cropService = data?.crop?.[0];
@@ -50,9 +53,8 @@ export default function CropAreaPieChart({ data }) {
         </PieChart>
       </ResponsiveContainer>
       <p className="text-xs text-gray-400 mt-2">
-        <p className="text-xs text-gray-400 mt-2">
-          Where this comes from: DES / MoSPI (government crop statistics)
-        </p>
+        Where this comes from: DES / MoSPI (government crop statistics)
+        {freshnessLabel ? ` · AIAIC marks this data ${freshnessLabel.toLowerCase()}` : ""}
       </p>
     </div>
   );
