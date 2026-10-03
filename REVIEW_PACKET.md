@@ -1,72 +1,51 @@
-# REVIEW_PACKET.md
-## AIAIC District Intelligence Dashboard
-**Submitted by:** Gauri Deshpande  
-**Task:** Interface Layer — Task 3  
-**Date:** April 2026
+# REVIEW_PACKET: AIAIC District Intelligence Dashboard (prototype)
 
----
+**Owner:** Gauri Deshpande. **State:** DRAFT, prepared in Hemanth's review of 2026-10-02 for Gauri to check, edit
+and sign. The April 2026 packet described mock adapters (`Mahesadapter`, `deep_adapter`) that no longer exist; it
+is replaced.
 
-## 1. Entry Point
-- File: `index.html` loads `src/main.jsx` which renders `src/App.jsx`
-- Run: `npm run dev` → opens at `http://localhost:5173`
+## 1. Entry point
 
----
+- `index.html` → `src/main.jsx` → `src/App.jsx`. Run: `npm run dev`. Tests: `npm test`.
+- Configuration: `.env` (not committed) with `VITE_AIAIC_API`, the AIAIC server address (see `.env.example`).
 
-## 2. Core Execution Flow (3 files)
+## 2. Core flow (input → output)
 
-**`src/App.jsx`** — Central state manager. Holds district, crop, season, status, data, simulation state. Triggers data load via useEffect when all 3 inputs are selected.
+1. **State → district.** `GET /places/districts?state=`: the state's districts, by AIAIC's closed list.
+2. **District → crop.** `GET /places/crops?state=&district=`: the crops AIAIC offers for that district, in its
+   order (Nashik: onion, maize, soybean, wheat, …).
+3. **District + crop → answers.** `GET /view/unified?crop=&region=&state=&lang=en`: market, water, crop,
+   storage and weather answers, each with AIAIC's summary.
+4. The panels show each answer with its source, date and staleness:
+   - `DataDisplayPanel`: harvest, best mandi price, water stress, and the taluka warning;
+   - `SimulationPanel`: sell or store; a fixed band is shown as the single price it is;
+   - `CropAreaPieChart`: the district's crop area (DES).
 
-**`src/data_adapter/Mahesadapter.jsx`** — Converts raw Mahesh pipeline JSON into UI-ready format. Adds intelligence labels: yield trend, price trend, water stress level.
+All of it is in `src/data_adapter/aiaicApi.js` (calls) and the four components. Nothing is computed in the browser.
 
-**`src/data_adapter/deep_adapter.jsx`** — Converts Deep's simulation JSON into UI format. Calculates risk level and confidence percentage.
+## 3. What was built
 
----
+- Live AIAIC data only, from one server. The district-synced crop list comes from AIAIC.
+- Source, date and freshness on every card. The uncalibrated warning is shown.
+- The fixed-band rule, with a test on a real recorded AIAIC answer (Nashik onion, 2026-10-02) and a defect
+  control: removing the rule makes the test fail.
 
-## 3. Live Flow (Input → Output)
+## 4. What is intentionally not here
 
-User selects District + Crop + Season
-→ App.jsx useEffect triggers
-→ Status set to "loading" (spinner shown)
-→ Mock data fetched from maheshMock.json + simulationMock.json
-→ adaptMaheshData() adds yield trend, price trend, water stress labels
-→ adaptSimulation() adds income bands, risk level, confidence score
-→ Status set to "success"
-→ DataDisplayPanel shows yield/price/water cards
-→ SimulationPanel shows income bar chart
+- No intelligence logic of its own (district KPIs are specified in `AIAIC_DATASET_REGISTER_V1_NASHIK.csv` and
+  `DISTRICT_KPI_CATALOGUE_V1_NASHIK.csv`, and built in AIAIC's backend).
+- No farmer data and no personal data.
+- Not the farmer or admin application.
 
----
+## 5. Risks and open questions
 
-## 4. What Was Built
+- The four AIAIC limitations listed in the README (mandi day, water card, storage wording, missing onion
+  production).
+- Whether this prototype is kept (see `GAURI_ROLE_AND_NEXT_TASK_2026-10-02.md`) or its views move into AIAIC.
 
-- DistrictSelector — dropdown for Pune, Nashik, Aurangabad
-- CropSelector — dropdown for wheat, rice, sugarcane
-- TimeRangeSelector — dropdown for Kharif/Rabi/Zaid seasons
-- SystemStateBar — shows idle/loading/success/error states
-- DataDisplayPanel — 3 intelligence cards: yield signal, mandi price, water stress
-- SimulationPanel — bar chart with best/average/worst income scenarios
-- Data Adapter Layer — converts raw JSON to labeled intelligence output
-- Mock Data — structured as district > crop > fields (same schema as Mahesh/Deep)
+## 6. Evidence
 
----
-
-## 5. Failure Cases
-
-- Missing district/crop/season → status stays idle, no fetch triggered
-- Data not found for combination → error caught, error state shown
-- Adapter receives null → returns null safely, panel renders nothing
-- Import/parse failure → caught in try/catch, error state shown
-
----
-
-## 6. Proof
-
-Selecting Pune + Wheat + Kharif 2025 shows:
-- Yield: 3.4 T/ha — Stable trend
-- Mandi Price: 2100 per quintal — Above Average
-- Water Stress: 68% — Low Stress
-- Income Simulation: Best 85000 / Average 68000 / Worst 42000
-- Confidence: 82% — Low Risk
-
-All 3 districts and all 3 crops work correctly.
-Loading spinner appears during simulated fetch.
-Error state displays for invalid combinations.
+- `npm test`: 3 passed (2026-10-02). `npm run build` succeeds. `eslint src` reports no problems.
+- A browser run against the local AIAIC API, Maharashtra → Nashik → Onion: districts loaded, the crop list was
+  Nashik's, the answers were shown, and the store card showed the single price with the fixed-band note (screenshot
+  in the review folder).

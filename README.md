@@ -1,80 +1,54 @@
-# AIAIC District Intelligence Dashboard
+# AIAIC District Intelligence Dashboard (prototype)
 
-A real-data agricultural intelligence dashboard built for the AIAIC/AQAIC Live Farm-to-Table
-District Intelligence & Execution Integration project.
+A React prototype that shows AIAIC's real answers for one district and crop, with their sources: harvest (DES),
+mandi price (Agmarknet), water stress (CGWB), sell or store, and the district's crop area.
 
-**Pilot district:** Nashik, Maharashtra
-**Pilot commodities:** Soybean, Rice
+**Owner:** Gauri Deshpande, District Intelligence + Farm-to-Table Intelligence (AIAIC/AQAIC).
+**Pilot district:** Nashik, Maharashtra. **Pilot commodities:** onion, soybean, tur (team decision, 2026-09-26).
+**Status:** a prototype for reviewing intelligence. It is not the farmer or admin application, which is AIAIC's.
+It computes nothing itself: every figure is AIAIC's, with its source and date.
 
-## What this shows
+## Run
 
-For a selected district and crop, the dashboard displays:
+```bash
+npm ci                    # or npm install the first time after a dependency change
+cp .env.example .env      # then set VITE_AIAIC_API to the AIAIC server you were given
+npm run dev
+npm test                  # vitest
+```
 
-- **Yield Signal** — district crop yield (DES / MoSPI)
-- **Mandi Price** — real daily mandi prices with mandi-level comparison (Agmarknet)
-- **Water Stress** — groundwater extraction stage (GSDA)
-- **Crop Area Share** — real crop-area breakdown for the district (DES)
-- **Sell-Now vs Store Simulation** — an illustrative scenario built on real price/MSP/storage-cost data
+## What it reads (one server, `VITE_AIAIC_API`)
 
-Every card shows its data source. The dashboard also displays the backend's own
-`uncalibrated_warning`: **this is a working demo on real data, not farmer-ready advice.**
-Thresholds have not yet been reviewed by an agronomist or agricultural economist.
+| Route | Used for |
+|---|---|
+| `GET /places/districts?state=` | the state's districts (current official names) |
+| `GET /places/crops?state=&district=` | the crops AIAIC offers for THAT district, in its order, each with why it is listed |
+| `GET /view/unified?crop=&region=&state=&lang=en` | every service's answer plus its summary: action, confidence, key numbers, sources, and which ranges are fixed bands |
 
-## Tech stack
+`src/data_adapter/aiaicApi.js` is the only file that calls the server.
 
-- React + Vite
-- Tailwind CSS
-- Recharts (for the pie chart)
+## Rules this prototype keeps
 
-## Project structure:
-src/
-components/
-CropSelector.jsx
-DistrictSelector.jsx
-DataDisplayPanel.jsx
-CropAreaPieChart.jsx
-SimulationPanel.jsx
-SystemStateBar.jsx
-data_adapter/
-useCatalog.js
-catalogOptions.js
-App.jsx
+- Every card names its source and date. Stale data is said to be stale.
+- A range AIAIC marks as a fixed band (`fixed_band`, e.g. ±2% around one price) is never shown as "a better day /
+  a weaker day". Only the price is shown (`src/test/the_store_panel_never_shows_a_fixed_band_as_a_range.test.jsx`).
+- No hardcoded fallback lists. No mock data. No server address in the repository.
 
-## Backend
+## Known limitations (what AIAIC itself shows today for Nashik onion)
 
-Connects to a live backend (Hemanth's API) via:
-
-- `GET /catalog?state=maharashtra` — dynamic crop/district dropdown options
-- `GET /intelligence/unified?crop=&region=&state=&per_service=1` — unified real-data response
-
-## Data sources currently integrated (see AIAIC_DATASET_REGISTER_V1 for full list)
-
-| Layer | Source | Status |
-|---|---|---|
-| Market | Agmarknet daily prices | VERIFIED |
-| Water | GSDA groundwater assessment | VERIFIED |
-| Agriculture | DES district crop APY | VERIFIED |
-| Weather | Open-Meteo (interim stand-in for IMD) | PARTIALLY VERIFIED |
-| Soil, Insurance, eNAM, FPO, Consumer | — | Not yet acquired |
-
-## Known limitations
-
-- Water/CGWB data is a district-wide average and does not reflect taluka-level variation
-  (some Nashik talukas are individually water-critical even though the district reads "safe").
-- Weather data is an interim stand-in for the official IMD feed.
-- The Sell-Now vs Store simulation uses a real reference mandi price from outside Nashik
-  (APMC Amarawati) and an assumed spoilage rate — it is explicitly illustrative, not a
-  farmer-ready recommendation.
-- Soil, crop insurance, eNAM, FPO/aggregator, and consumer-facing data are not yet available.
+- No onion production figure: DES 2024-25 has no onion row for Nashik.
+- The mandi card can name a mandi far from Nashik when the newest price day is thin (AIAIC backlog item 32).
+- The water card's district figure hides critical talukas (Niphad, Sinnar). Two assessments disagree on Deola
+  (AIAIC backlog item 36).
+- The store card says "no storage available" where Nashik has 15 active registered warehouses (AIAIC backlog
+  item 37).
+- No arrivals, soil, insurance, FPO, processing or consumer data yet (see the dataset register).
 
 ## Team
 
-- **Riddhi** — Application, Frontend, Data Integration
-- **Hemanth** — Backend, Data Engineering, API
-- **Kaushalendra** — CI/CD, VM, System Integration
-- **Gauri** — District Intelligence & Farm-to-Table Intelligence
-
-## Status
-
-First live demo slice complete: **Nashik → Soybean → Real Yield → Real Water → Real Mandi Price**,
-with source attribution and uncalibrated-data warnings visible in the UI.
+- **Gauri:** district and farm-to-table intelligence: what the evidence means for each stakeholder, the dataset
+  register, the KPI catalogue, domain validation.
+- **Riddhi:** the application and its screens.
+- **Hemanth:** the backend, data and API.
+- **Kaushlendra:** CI/CD, VM and integration.
+- **Aryan:** ML price forecast.

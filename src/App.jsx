@@ -5,7 +5,7 @@ import DataDisplayPanel from "./components/DataDisplayPanel";
 import SimulationPanel from "./components/SimulationPanel";
 import SystemStateBar from "./components/SystemStateBar";
 import CropAreaPieChart from "./components/CropAreaPieChart";
-import { useCatalog } from "./data_adapter/useCatalog";
+import { fetchCrops, fetchDistrictView, fetchDistricts } from "./data_adapter/aiaicApi";
 
 const ESTATES = [
   { id: "maharashtra", label: "Maharashtra" },
@@ -13,74 +13,83 @@ const ESTATES = [
 ];
 
 export default function App() {
-  const [district, setDistrict] = useState("");
-  const [crop, setCrop] = useState("");
+  const [estate, setEstate] = useState("maharashtra"); // "maharashtra" or "mp"
+  const [districts, setDistricts] = useState([]);
+  const [district, setDistrict] = useState(""); // a district NAME, as AIAIC lists it (e.g. "Nashik")
+  const [crops, setCrops] = useState([]);
+  const [crop, setCrop] = useState(""); // a crop KEY, as AIAIC lists it (e.g. "onion")
+  const [listError, setListError] = useState(null);
   const [status, setStatus] = useState("idle");
   const [data, setData] = useState(null);
-  const [estate, setEstate] = useState("maharashtra"); // "maharashtra" or "mp"
 
-  const { catalog, error: catalogError, retry: retryCatalog } = useCatalog(estate);
-
-  // Districts differ between states, so clear the old selections when the state changes
-  const handleEstateChange = (newEstate) => {
-    setEstate(newEstate);
+  // A change of choice clears everything that depended on the old one, here and not inside an effect.
+  const chooseEstate = (next) => {
+    setEstate(next);
+    setDistricts([]);
     setDistrict("");
+    setCrops([]);
     setCrop("");
+    setListError(null);
+    setData(null);
+    setStatus("idle");
+  };
+  const chooseDistrict = (next) => {
+    setDistrict(next);
+    setCrops([]);
+    setCrop("");
+    setData(null);
+    setStatus("idle");
+  };
+  const chooseCrop = (next) => {
+    setCrop(next);
+    setData(null);
+    setStatus(district && next ? "loading" : "idle");
   };
 
+  // The state's districts (never a hardcoded fallback list).
   useEffect(() => {
-    if (!district || !crop) {
-      setStatus("idle");
-      setData(null);
-      return;
-    }
+    let cancelled = false;
+    fetchDistricts(estate)
+      .then((list) => !cancelled && setDistricts(list))
+      .catch((e) => !cancelled && setListError(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [estate]);
 
+  // The crops for THIS district, in AIAIC's order: what is grown or traded here, not every crop in the state.
+  useEffect(() => {
+    if (!district) return undefined;
+    let cancelled = false;
+    fetchCrops(estate, district)
+      .then((list) => !cancelled && setCrops(list))
+      .catch((e) => !cancelled && setListError(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [estate, district]);
+
+  useEffect(() => {
+    if (!district || !crop) return undefined;
     let cancelled = false; // ignore answers that arrive after the selection changed
-
-    setStatus("loading");
-    setData(null);
-
-    const fetchUnifiedIntelligence = async () => {
-      try {
-        const API_BASE = import.meta.env.VITE_AQIAIC_BASE_URL;
-
-        const queryParams = new URLSearchParams({
-          crop: crop.toLowerCase(),
-          region: district,
-          state: estate,
-          per_service: "1",
-        });
-
-        const response = await fetch(`${API_BASE}/intelligence/unified?${queryParams}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`${response.status} ${await response.text()}`);
-        }
-
-        const payload = await response.json();
+    fetchDistrictView({ state: estate, district, crop })
+      .then((payload) => {
         if (cancelled) return;
-
         setData(payload);
         setStatus("success");
-      } catch (err) {
+      })
+      .catch((err) => {
         if (cancelled) return;
         console.error("Connection Error:", err.message);
         setStatus("error");
-      }
-    };
-
-    fetchUnifiedIntelligence();
-
+      });
     return () => {
       cancelled = true;
     };
   }, [district, crop, estate]);
+
+  const cropName = (crops.find((c) => c.key === crop) || {}).name || crop;
+  const uncalibrated = data?.market?.[0]?.uncalibrated_warning;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -92,23 +101,20 @@ export default function App() {
         </p>
       </div>
 
-      {/* Catalog error, with retry */}
-      {catalogError && (
-        <div className="max-w-5xl mx-auto mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
-          <p className="text-sm text-red-600">Could not load crop/district list: {catalogError}</p>
-          <button onClick={retryCatalog} className="text-sm font-medium text-red-700 underline">
-            Retry
-          </button>
+      {/* List error: said, never replaced by a hardcoded list */}
+      {listError && (
+        <div className="max-w-5xl mx-auto mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-600">Could not load the district or crop list: {listError}</p>
         </div>
       )}
 
       {/* Backend's own "not farmer-ready" warning */}
-      {status === "success" && data?.market?.[0]?.uncalibrated_warning && (
+      {status === "success" && uncalibrated && (
         <div className="max-w-5xl mx-auto mb-4 bg-yellow-50 border border-yellow-300 rounded-lg p-4">
           <p className="text-sm font-semibold text-yellow-800">
             ⚠️ Needs to be approved by agronomists before in use.
           </p>
-          <p className="text-xs text-yellow-700 mt-1">{data.market[0].uncalibrated_warning}</p>
+          <p className="text-xs text-yellow-700 mt-1">{uncalibrated}</p>
         </div>
       )}
 
@@ -119,7 +125,7 @@ export default function App() {
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">State</label>
             <select
               value={estate}
-              onChange={(e) => handleEstateChange(e.target.value)}
+              onChange={(e) => chooseEstate(e.target.value)}
               className="mt-1 w-full border border-gray-200 rounded-lg p-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               {ESTATES.map((s) => (
@@ -129,13 +135,13 @@ export default function App() {
               ))}
             </select>
           </div>
-          <DistrictSelector value={district} onChange={setDistrict} catalog={catalog} />
-          <CropSelector value={crop} onChange={setCrop} catalog={catalog} />
+          <DistrictSelector value={district} onChange={chooseDistrict} options={districts} />
+          <CropSelector value={crop} onChange={chooseCrop} options={crops} disabled={!district} />
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto mb-4">
-        <SystemStateBar status={status} district={district} crop={crop} />
+        <SystemStateBar status={status} district={district} crop={cropName} />
       </div>
 
       {status === "loading" && (
@@ -146,7 +152,7 @@ export default function App() {
 
       {status === "success" && (
         <div className="max-w-5xl mx-auto flex flex-col gap-5">
-          <DataDisplayPanel data={data} crop={crop} />
+          <DataDisplayPanel data={data} crop={cropName} />
           <SimulationPanel data={data} />
           <CropAreaPieChart data={data} />
         </div>
